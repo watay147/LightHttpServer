@@ -1,5 +1,6 @@
 package LightHttpServer;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -26,6 +27,9 @@ public class HttpRequest {
 	public Map<String, List<String>> headers;
 	public HttpEntity entity;
 	
+	public HttpRequest(){
+		
+	}
 	
 	
 }

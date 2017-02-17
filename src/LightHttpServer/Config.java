@@ -8,6 +8,7 @@ public class Config {
 	public int keepAliveTime;
 	public String documentRootDirectoryPath;
 	public String indexFilePath;
+	public String serverVersion;
 	
 	
 	public void loadConfig(){
@@ -18,5 +19,6 @@ public class Config {
 		documentRootDirectoryPath="E:/workspace/www/";
 		indexFilePath="index.html";
 		coreNum=Runtime.getRuntime().availableProcessors();
+		serverVersion="LightHttpServer/0.1";
 	}
 }

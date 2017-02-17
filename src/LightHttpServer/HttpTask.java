@@ -3,6 +3,9 @@ package LightHttpServer;
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
+import java.io.DataInputStream;
+import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
@@ -11,14 +14,17 @@ import java.io.Reader;
 import java.io.Writer;
 import java.net.Socket;
 import java.nio.charset.Charset;
+import java.security.KeyStore.Entry;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.StringTokenizer;
 
 import LightHttpServer.HttpRequest.Method;
+import StringUtils.StringUtils;
 
 
 public class HttpTask implements Runnable   {
@@ -43,11 +49,12 @@ public class HttpTask implements Runnable   {
         	OutputStream raw = new BufferedOutputStream(
         			connectionSocket.getOutputStream()
                    );
-        	Writer out = new OutputStreamWriter(raw);
+        	
         	BufferedReader bufferedReader=new BufferedReader(
         			new InputStreamReader(connectionSocket.getInputStream()));
         	HttpRequest httpRequest=parseRequest(bufferedReader);
         	HttpResponse httpResponse=handleRequest(httpRequest);
+        	handleResponse(httpResponse,raw);
         }
         catch (IOException ex){
         	//TODO log
@@ -85,7 +92,7 @@ public class HttpTask implements Runnable   {
     
     	
     	httpRequest.headers=getHeaders(in);
-    	httpRequest.entity=getEntity(in,httpRequest.headers);
+    	httpRequest.entity=getRequestEntity(in,httpRequest.headers);
     	
     	return httpRequest;	 
 		
@@ -136,7 +143,7 @@ public class HttpTask implements Runnable   {
 		
 	}
 
-	private HttpEntity getEntity(BufferedReader in,Map<String, List<String>> headers) throws IOException{
+	private HttpEntity getRequestEntity(BufferedReader in,Map<String, List<String>> headers) throws IOException{
 		HttpEntity entity=new HttpEntity();
 		if(headers.containsKey("Content-Length")){
 			entity.contentLength=Long.valueOf(headers.get("Content-Length").get(0).trim());
@@ -161,11 +168,63 @@ public class HttpTask implements Runnable   {
 		return entity;
 	}
 
-	private HttpResponse handleRequest(HttpRequest httpRequest){
+	private HttpResponse handleRequest(HttpRequest httpRequest) throws IOException{
 		HttpResponse httpResponse=new HttpResponse();
+		File file = new File(documentRootDirectoryPath, 
+				httpRequest.requestUrl.substring(1,httpRequest.requestUrl.length()));
+		if (file.canRead() 
+	              // Don't let clients outside the document root
+	            		&& file.getCanonicalPath().startsWith(documentRootDirectoryPath)){
+			DataInputStream fis = new DataInputStream(
+                    new BufferedInputStream(
+                     new FileInputStream(file)
+                    )
+                   );
+			byte[] data = new byte[(int) file.length()];
+			fis.readFully(data);
+			fis.close();
+			httpResponse.entity.body=data;
+			httpResponse.entity.contentLength=file.length();
+			httpResponse.entity.contentType="text/html";//TODO fix type
+			
+			httpResponse.headers.put("Content-length",new ArrayList<String>());
+			httpResponse.headers.get("Content-length").add(httpResponse.entity.contentLength+"");
+			httpResponse.headers.put("Content-type",new ArrayList<String>());
+			httpResponse.headers.get("Content-type").add(httpResponse.entity.contentType);
+			httpResponse.setStatusLine("HTTP/1.0", HttpResponse.HTTP_OK, "");
+		}
+		else{
+			httpResponse.setStatusLine("HTTP/1.0", HttpResponse.HTTP_NOT_FOUND, "File Not Found");
+			httpResponse.headers.put("Content-type",new ArrayList<String>());
+			httpResponse.headers.get("Content-type").add("text/plain");
+            
+		}
+		Date now = new Date();
+		httpResponse.headers.put("Date",new ArrayList<String>());
+		httpResponse.headers.get("Date").add(now+"");
+		httpResponse.headers.put("Server",new ArrayList<String>());
+		httpResponse.headers.get("Server").add(config.serverVersion);
+		
+		
+		
 		
 		return httpResponse;
 		
+	}
+	
+	private void handleResponse(HttpResponse httpResponse,OutputStream raw) throws IOException {
+		Writer out = new OutputStreamWriter(raw);
+		 out.write(String.format("%s %d %s\r\n", httpResponse.version,httpResponse.status,httpResponse.reasonPhrase));
+		 for(Map.Entry<String,List<String>> entry:httpResponse.headers.entrySet()){
+			 out.write(String.format("%s: %s\r\n", entry.getKey(),StringUtils.join(entry.getValue(), " ")));
+		 }
+		
+         out.write("\r\n");
+         out.flush();
+         if(httpResponse.status==HttpResponse.HTTP_OK){
+        	 raw.write(httpResponse.entity.body);
+        	 raw.flush();
+         }
 	}
 
 }
