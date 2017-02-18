@@ -195,7 +195,7 @@ public class HttpTask implements Runnable   {
 			List<String> emotyList=new ArrayList<>();
 			
 			envp[index++]="REQUEST_METHOD="+httpRequest.methodString;
-			envp[index++]="QUERY_STRING="+httpRequest.requestUrl.substring(httpRequest.requestUrl.indexOf("?")+1);
+			envp[index++]="QUERY_STRING="+(httpRequest.requestUrl.contains("?")?httpRequest.requestUrl.substring(httpRequest.requestUrl.indexOf("?")+1):"");
 			envp[index++]="CONTENT_LENGTH="+StringUtils.join(httpRequest.headers.getOrDefault("Content-Length", emotyList), ",");
 //			envp[index++]="CONTENT_TYPE="+StringUtils.join(httpRequest.headers.getOrDefault("Content-Type", emotyList), ",");
 			StringBuilder sb=new StringBuilder();
