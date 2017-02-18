@@ -193,7 +193,7 @@ public class HttpTask implements Runnable   {
 			scriptPath=scriptPath.substring(0,scriptPath.indexOf("?"));
 		File file=new File(config.CGIPath,scriptPath);
 		if (file.canRead() &&file.getCanonicalPath().startsWith(config.CGIPath)){
-			CGI_ENV_LENGTH=3;
+			CGI_ENV_LENGTH=4;//TODO support all env
 			String[] envp=new String[CGI_ENV_LENGTH];
 			int index=0;
 			List<String> emotyList=new ArrayList<>();
@@ -201,7 +201,7 @@ public class HttpTask implements Runnable   {
 			envp[index++]="REQUEST_METHOD="+httpRequest.methodString;
 			envp[index++]="QUERY_STRING="+(httpRequest.requestUrl.contains("?")?httpRequest.requestUrl.substring(httpRequest.requestUrl.indexOf("?")+1):"");
 			envp[index++]="CONTENT_LENGTH="+StringUtils.join(httpRequest.headers.getOrDefault("Content-Length", emotyList), ",");
-//			envp[index++]="CONTENT_TYPE="+StringUtils.join(httpRequest.headers.getOrDefault("Content-Type", emotyList), ",");
+			envp[index++]="CONTENT_TYPE="+StringUtils.join(httpRequest.headers.getOrDefault("Content-Type", emotyList), ",");
 			StringBuilder sb=new StringBuilder();
 			if(scriptPath.endsWith(".py")){
 				
@@ -223,7 +223,7 @@ public class HttpTask implements Runnable   {
 			}
 			
 			httpResponse.entity=new HttpEntity();
-			httpResponse.entity.contentType="text/html";
+			httpResponse.entity.contentType="text/html";//TODO get exact type
 			
 			httpResponse.entity.body=sb.toString().getBytes();
 			httpResponse.entity.contentLength=new Long(httpResponse.entity.body.length);
