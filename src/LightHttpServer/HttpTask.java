@@ -12,7 +12,9 @@ import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.Reader;
 import java.io.Writer;
+import java.net.FileNameMap;
 import java.net.Socket;
+import java.net.URLConnection;
 import java.nio.charset.Charset;
 import java.security.KeyStore.Entry;
 import java.util.ArrayList;
@@ -180,12 +182,18 @@ public class HttpTask implements Runnable   {
                      new FileInputStream(file)
                     )
                    );
+			
+			String contentType=null;
+			if((contentType=guessContentTypeFromName(httpRequest.requestUrl))==null){
+				contentType=URLConnection.guessContentTypeFromStream(fis);
+			}
+			httpResponse.entity.contentType=contentType;
+			
 			byte[] data = new byte[(int) file.length()];
 			fis.readFully(data);
 			fis.close();
 			httpResponse.entity.body=data;
 			httpResponse.entity.contentLength=file.length();
-			httpResponse.entity.contentType="text/html";//TODO fix type
 			
 			httpResponse.headers.put("Content-length",new ArrayList<String>());
 			httpResponse.headers.get("Content-length").add(httpResponse.entity.contentLength+"");
@@ -209,6 +217,12 @@ public class HttpTask implements Runnable   {
 		
 		
 		return httpResponse;
+		
+	}
+	
+	private String guessContentTypeFromName(String url) {
+		String fileName=url.substring(url.lastIndexOf("/")+1,url.length());
+		return URLConnection.guessContentTypeFromName(fileName);
 		
 	}
 	
