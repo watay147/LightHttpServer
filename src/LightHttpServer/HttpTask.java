@@ -33,19 +33,17 @@ public class HttpTask implements Runnable   {
 	
 	private Config config;
 	private String documentRootDirectoryPath;
-	private Object taskData;  
+	private Socket connectionSocket;  
 	
 	public HttpTask(Config config,Object taskData){
 		this.config=config;
 		this.documentRootDirectoryPath=config.documentRootDirectoryPath;
-		this.taskData=taskData;
+		this.connectionSocket= (Socket) taskData;
 		
 	}
 
 	@Override
 	public void run() {
-		Socket connectionSocket;  
-        connectionSocket = (Socket) taskData;   
         try   
         {    
         	OutputStream raw = new BufferedOutputStream(
@@ -199,10 +197,13 @@ public class HttpTask implements Runnable   {
 			httpResponse.headers.get("Content-length").add(httpResponse.entity.contentLength+"");
 			httpResponse.headers.put("Content-type",new ArrayList<String>());
 			httpResponse.headers.get("Content-type").add(httpResponse.entity.contentType);
-			httpResponse.setStatusLine("HTTP/1.0", HttpResponse.HTTP_OK, "");
+			
+			addAdditionalHeaders(httpResponse,httpRequest);
+			
+			httpResponse.setStatusLine(config.httpVersion, HttpResponse.HTTP_OK, "");
 		}
 		else{
-			httpResponse.setStatusLine("HTTP/1.0", HttpResponse.HTTP_NOT_FOUND, "File Not Found");
+			httpResponse.setStatusLine(config.httpVersion, HttpResponse.HTTP_NOT_FOUND, "File Not Found");
 			httpResponse.headers.put("Content-type",new ArrayList<String>());
 			httpResponse.headers.get("Content-type").add("text/plain");
             
@@ -224,6 +225,26 @@ public class HttpTask implements Runnable   {
 		String fileName=url.substring(url.lastIndexOf("/")+1,url.length());
 		return URLConnection.guessContentTypeFromName(fileName);
 		
+	}
+	
+	private void addAdditionalHeaders(HttpResponse httpResponse,HttpRequest httpRequest) {
+		//set additional headers according to configured default headers respect to specific paths 
+		for(Map.Entry<String,Map<String,String>> entry:config.headersForPathMap.entrySet()){
+			if(httpRequest.requestUrl.startsWith(entry.getKey())){
+				for(Map.Entry<String,String> subEntry:entry.getValue().entrySet()){
+					if(httpResponse.headers.containsKey(subEntry.getKey())){
+						httpResponse.headers.get(subEntry.getKey()).add(subEntry.getValue());
+					}
+					else{
+						List<String> header=new ArrayList<>();
+						header.add(subEntry.getValue());
+						httpResponse.headers.put(subEntry.getKey(), header);
+					}
+				}
+				
+			}
+			 
+		 }
 	}
 	
 	private void handleResponse(HttpResponse httpResponse,OutputStream raw) throws IOException {
