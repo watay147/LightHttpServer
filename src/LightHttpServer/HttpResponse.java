@@ -206,7 +206,7 @@ public class HttpResponse {
 	
 	public HttpResponse(){
 		this.headers=new HashMap<String, List<String>>();
-		this.entity=new HttpEntity();
+		
 	}
 	
 	public void setStatusLine(String version,int status,String reasonPhrase) {

@@ -12,11 +12,13 @@ import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.Reader;
 import java.io.Writer;
+import java.math.BigInteger;
 import java.net.FileNameMap;
 import java.net.Socket;
 import java.net.URLConnection;
 import java.nio.charset.Charset;
 import java.security.KeyStore.Entry;
+import java.security.MessageDigest;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
@@ -185,22 +187,29 @@ public class HttpTask implements Runnable   {
 			if((contentType=guessContentTypeFromName(httpRequest.requestUrl))==null){
 				contentType=URLConnection.guessContentTypeFromStream(fis);
 			}
-			httpResponse.entity.contentType=contentType;
-			
+			Date lastModified=new Date(file.lastModified());
 			byte[] data = new byte[(int) file.length()];
 			fis.readFully(data);
 			fis.close();
-			httpResponse.entity.body=data;
-			httpResponse.entity.contentLength=file.length();
+			if(checkCacheValid(httpRequest,httpResponse,data,lastModified)){
+				httpResponse.setStatusLine(config.httpVersion, HttpResponse.HTTP_NOT_MODIFIED, "Not Modified");
+			}
+			else{
+				httpResponse.entity=new HttpEntity();
+				httpResponse.entity.contentType=contentType;
+				httpResponse.entity.lastModified=lastModified.toGMTString();
+				httpResponse.entity.body=data;
+				httpResponse.entity.contentLength=file.length();
 			
-			httpResponse.headers.put("Content-length",new ArrayList<String>());
-			httpResponse.headers.get("Content-length").add(httpResponse.entity.contentLength+"");
-			httpResponse.headers.put("Content-type",new ArrayList<String>());
-			httpResponse.headers.get("Content-type").add(httpResponse.entity.contentType);
+				httpResponse.headers.put("Content-length",new ArrayList<String>());
+				httpResponse.headers.get("Content-length").add(httpResponse.entity.contentLength+"");
+				httpResponse.headers.put("Content-type",new ArrayList<String>());
+				httpResponse.headers.get("Content-type").add(httpResponse.entity.contentType);
 			
-			addAdditionalHeaders(httpResponse,httpRequest);
+				addAdditionalHeaders(httpResponse,httpRequest);
 			
-			httpResponse.setStatusLine(config.httpVersion, HttpResponse.HTTP_OK, "");
+				httpResponse.setStatusLine(config.httpVersion, HttpResponse.HTTP_OK, "");
+			}
 		}
 		else{
 			httpResponse.setStatusLine(config.httpVersion, HttpResponse.HTTP_NOT_FOUND, "File Not Found");
@@ -210,7 +219,7 @@ public class HttpTask implements Runnable   {
 		}
 		Date now = new Date();
 		httpResponse.headers.put("Date",new ArrayList<String>());
-		httpResponse.headers.get("Date").add(now+"");
+		httpResponse.headers.get("Date").add(now.toGMTString());
 		httpResponse.headers.put("Server",new ArrayList<String>());
 		httpResponse.headers.get("Server").add(config.serverVersion);
 		
@@ -219,6 +228,30 @@ public class HttpTask implements Runnable   {
 		
 		return httpResponse;
 		
+	}
+	
+	
+	private boolean checkCacheValid(HttpRequest httpRequest,HttpResponse httpResponse,byte[] data,Date lastModified) {
+		boolean flag=false;
+		if(httpRequest.headers.containsKey("If-Modified-Since")){
+			if(httpRequest.headers.get("If-Modified-Since").get(0).trim().equals(lastModified.toGMTString())){
+				List<String> header=new ArrayList<>();
+				header.add(lastModified.toGMTString());
+				httpResponse.headers.put("Last-Modified", header);
+				flag=true;
+			}
+		}
+		else if(httpRequest.headers.containsKey("If-None-Match")){
+			String ETag=generateETag(data);
+			if(httpRequest.headers.get("If-None-Match").get(0).trim().equals(ETag)){
+				List<String> header=new ArrayList<>();
+				header.add(ETag);
+				httpResponse.headers.put("ETag", header);
+				flag=true;
+			}
+		}
+		
+		return flag;
 	}
 	
 	private String guessContentTypeFromName(String url) {
@@ -236,6 +269,19 @@ public class HttpTask implements Runnable   {
 						httpResponse.headers.get(subEntry.getKey()).add(subEntry.getValue());
 					}
 					else{
+						if(subEntry.getKey().equals("Last-Modified")){
+							List<String> header=new ArrayList<>();
+							header.add(httpResponse.entity.lastModified);
+							httpResponse.headers.put(subEntry.getKey(), header);
+							continue;
+						}
+						else if(subEntry.getKey().equals("ETag")){
+							List<String> header=new ArrayList<>();
+							header.add(generateETag(httpResponse.entity.body));
+							httpResponse.headers.put(subEntry.getKey(), header);
+							continue;
+						}
+						
 						List<String> header=new ArrayList<>();
 						header.add(subEntry.getValue());
 						httpResponse.headers.put(subEntry.getKey(), header);
@@ -247,6 +293,16 @@ public class HttpTask implements Runnable   {
 		 }
 	}
 	
+	private String generateETag(byte[] data) {
+		try {
+	        MessageDigest md = MessageDigest.getInstance("MD5");  
+	        md.update(data);        
+	        return new BigInteger(1, md.digest()).toString(16);
+	    } catch (Exception e) {
+	    	return "";
+	    }
+	}
+
 	private void handleResponse(HttpResponse httpResponse,OutputStream raw) throws IOException {
 		Writer out = new OutputStreamWriter(raw);
 		 out.write(String.format("%s %d %s\r\n", httpResponse.version,httpResponse.status,httpResponse.reasonPhrase));
@@ -256,7 +312,7 @@ public class HttpTask implements Runnable   {
 		
          out.write("\r\n");
          out.flush();
-         if(httpResponse.status==HttpResponse.HTTP_OK){
+         if(httpResponse.entity!=null){
         	 raw.write(httpResponse.entity.body);
         	 raw.flush();
          }

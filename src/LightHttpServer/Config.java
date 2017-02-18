@@ -6,6 +6,7 @@ import java.util.Map;
 public class Config {
 	public String httpVersion;
 	public String host;
+	
 	public int port;
 	public int coreNum;
 	public int maxThreadNum;
@@ -27,8 +28,13 @@ public class Config {
 		serverVersion="LightHttpServer/0.1";
 		headersForPathMap=new HashMap<String, Map<String,String>>();
 		Map<String, String> defaultHeaders=new HashMap<String, String>();
-		defaultHeaders.put("Cache-Control", "max-age = 20");
+//		defaultHeaders.put("Cache-Control", "max-age = 20");
+//		defaultHeaders.put("Cache-Control", "must-revalidate");
+		defaultHeaders.put("Last-Modified", "0");
+		defaultHeaders.put("ETag", "0");
+		
 		headersForPathMap.put("/",defaultHeaders);
+		
 		
 	}
 }
