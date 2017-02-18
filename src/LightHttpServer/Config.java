@@ -12,6 +12,8 @@ public class Config {
 	public int maxThreadNum;
 	public int keepAliveTime;
 	public String documentRootDirectoryPath;
+	public String CGIAlias;
+	public String CGIPath;
 	public String indexFilePath;
 	public String serverVersion;
 	public Map<String, Map<String, String>> headersForPathMap;
@@ -23,6 +25,8 @@ public class Config {
 		maxThreadNum=10;
 		keepAliveTime=30;
 		documentRootDirectoryPath="E:/workspace/www/";
+		CGIAlias="/cgi-bin/";
+		CGIPath="E:/workspace/www/cgi-bin/";
 		indexFilePath="index.html";
 		coreNum=Runtime.getRuntime().availableProcessors();
 		serverVersion="LightHttpServer/0.1";
@@ -33,7 +37,7 @@ public class Config {
 		defaultHeaders.put("Last-Modified", "0");
 		defaultHeaders.put("ETag", "0");
 		
-		headersForPathMap.put("/",defaultHeaders);
+		headersForPathMap.put("/static/",defaultHeaders);
 		
 		
 	}

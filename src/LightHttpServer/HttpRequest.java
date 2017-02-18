@@ -18,7 +18,7 @@ public class HttpRequest {
         int PATCH = 7;
     }
 	
-	
+	public String methodString;
 	public int method;
 	public String requestUrl;
 	public String host;

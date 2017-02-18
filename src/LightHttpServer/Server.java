@@ -41,13 +41,21 @@ public class Server {
 		try{
 			
 			socket=new ServerSocket(config.port);
-			 File docroot;
-			 docroot = new File(config.documentRootDirectoryPath);
-			 if(!docroot.isDirectory()){
+			 File docRoot;
+			 docRoot = new File(config.documentRootDirectoryPath);
+			 if(!docRoot.isDirectory()){
 				 throw new IOException("Document root directory path \""+
 			 config.documentRootDirectoryPath+"\" is no valid");
 			 }
-			 config.documentRootDirectoryPath=docroot.getCanonicalPath();//have to turn to be OS specifically canonical
+			 config.documentRootDirectoryPath=docRoot.getCanonicalPath();//have to turn to be OS specifically canonical
+			 
+			 File docCGI;
+			 docCGI = new File(config.CGIPath);
+			 if(!docCGI.isDirectory()){
+				 throw new IOException("CGI directory path \""+
+						 config.CGIPath+"\" is no valid");
+			 }
+			 config.CGIPath=docCGI.getCanonicalPath();
 			 
 		}
 		catch (IOException ex){

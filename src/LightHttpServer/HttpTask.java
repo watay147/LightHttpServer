@@ -32,7 +32,7 @@ import StringUtils.StringUtils;
 
 
 public class HttpTask implements Runnable   {
-	
+	private static int CGI_ENV_LENGTH=13;
 	private Config config;
 	private String documentRootDirectoryPath;
 	private Socket connectionSocket;  
@@ -83,7 +83,8 @@ public class HttpTask implements Runnable   {
 		//read the first line
 		String requestLine = in.readLine();
     	StringTokenizer st = new StringTokenizer(requestLine);
-    	httpRequest.method = getMethod(st.nextToken());
+    	httpRequest.methodString=st.nextToken();
+    	httpRequest.method = getMethod(httpRequest.methodString);
     	httpRequest.requestUrl=st.nextToken();
     	//if in GET method, check if need to auto-fill index file path
     	if(httpRequest.method==Method.GET){
@@ -170,7 +171,75 @@ public class HttpTask implements Runnable   {
 		return entity;
 	}
 
+	
 	private HttpResponse handleRequest(HttpRequest httpRequest) throws IOException{
+		if(httpRequest.requestUrl.startsWith(config.CGIAlias)){
+			return handleCGIRequest(httpRequest);
+		}
+		else{
+			return handleStaticRequest(httpRequest);
+		}
+	}
+	
+	
+	private HttpResponse handleCGIRequest(HttpRequest httpRequest) throws IOException{
+		HttpResponse httpResponse=new HttpResponse();
+		String scriptPath=httpRequest.requestUrl.substring(httpRequest.requestUrl.indexOf(config.CGIAlias)+config.CGIAlias.length());
+		if(scriptPath.contains("?"))
+			scriptPath=scriptPath.substring(0,scriptPath.indexOf("?"));
+		File file=new File(config.CGIPath,scriptPath);
+		if (file.canRead() &&file.getCanonicalPath().startsWith(config.CGIPath)){
+			CGI_ENV_LENGTH=3;
+			String[] envp=new String[CGI_ENV_LENGTH];
+			int index=0;
+			List<String> emotyList=new ArrayList<>();
+			
+			envp[index++]="REQUEST_METHOD="+httpRequest.methodString;
+			envp[index++]="QUERY_STRING="+httpRequest.requestUrl.substring(httpRequest.requestUrl.indexOf("?")+1);
+			envp[index++]="CONTENT_LENGTH="+StringUtils.join(httpRequest.headers.getOrDefault("Content-Length", emotyList), ",");
+//			envp[index++]="CONTENT_TYPE="+StringUtils.join(httpRequest.headers.getOrDefault("Content-Type", emotyList), ",");
+			StringBuilder sb=new StringBuilder();
+			if(scriptPath.endsWith(".py")){
+				
+				Process process = Runtime.getRuntime().exec("python "+file.getCanonicalPath(), envp);
+				BufferedReader input = new BufferedReader(new InputStreamReader(process.getInputStream()));
+				
+				String line = null;
+				while ((line = input.readLine()) != null) {
+					sb.append(line);
+				}
+			
+			}
+			
+			httpResponse.entity=new HttpEntity();
+			httpResponse.entity.contentType="text/html";
+			
+			httpResponse.entity.body=sb.toString().getBytes();
+			httpResponse.entity.contentLength=new Long(httpResponse.entity.body.length);
+		
+			httpResponse.headers.put("Content-length",new ArrayList<String>());
+			httpResponse.headers.get("Content-length").add(httpResponse.entity.contentLength+"");
+			httpResponse.headers.put("Content-type",new ArrayList<String>());
+			httpResponse.headers.get("Content-type").add(httpResponse.entity.contentType);
+	
+		
+			httpResponse.setStatusLine(config.httpVersion, HttpResponse.HTTP_OK, "");
+		}
+		else{
+			httpResponse.setStatusLine(config.httpVersion, HttpResponse.HTTP_NOT_FOUND, "File Not Found");
+			httpResponse.headers.put("Content-type",new ArrayList<String>());
+			httpResponse.headers.get("Content-type").add("text/plain");
+            
+		}
+		Date now = new Date();
+		httpResponse.headers.put("Date",new ArrayList<String>());
+		httpResponse.headers.get("Date").add(now.toGMTString());
+		httpResponse.headers.put("Server",new ArrayList<String>());
+		httpResponse.headers.get("Server").add(config.serverVersion);
+		return httpResponse;
+	}
+	
+	private HttpResponse handleStaticRequest(HttpRequest httpRequest) throws IOException{
 		HttpResponse httpResponse=new HttpResponse();
 		File file = new File(documentRootDirectoryPath, 
 				httpRequest.requestUrl.substring(1,httpRequest.requestUrl.length()));
