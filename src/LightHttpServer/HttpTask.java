@@ -4,6 +4,7 @@ import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
 import java.io.DataInputStream;
+import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -167,6 +168,9 @@ public class HttpTask implements Runnable   {
             }
             entity.body=sb.toString().getBytes(Charset.forName("utf8"));
         }
+        else{
+        	return null;
+        }
         
 		return entity;
 	}
@@ -202,12 +206,19 @@ public class HttpTask implements Runnable   {
 			if(scriptPath.endsWith(".py")){
 				
 				Process process = Runtime.getRuntime().exec("python "+file.getCanonicalPath(), envp);
+				if(httpRequest.method==HttpRequest.Method.POST&&httpRequest.entity!=null){
+					DataOutputStream toCGI=new DataOutputStream(process.getOutputStream());
+					toCGI.write(httpRequest.entity.body);
+					toCGI.flush();//remember to flush
+				}
+				
 				BufferedReader input = new BufferedReader(new InputStreamReader(process.getInputStream()));
 				
 				String line = null;
 				while ((line = input.readLine()) != null) {
 					sb.append(line);
 				}
+				process.destroy();
 			
 			}
 			

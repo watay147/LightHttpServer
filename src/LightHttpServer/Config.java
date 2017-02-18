@@ -21,7 +21,7 @@ public class Config {
 	public void loadConfig(){
 		httpVersion="HTTP/1.0";
 		host="localhost";
-		port=8888;
+		port=8000;
 		maxThreadNum=10;
 		keepAliveTime=30;
 		documentRootDirectoryPath="E:/workspace/www/";
