@@ -186,14 +186,19 @@ public class HttpTask implements Runnable   {
 	}
 	
 	
-	private HttpResponse handleCGIRequest(HttpRequest httpRequest) throws IOException{
-		HttpResponse httpResponse=new HttpResponse();
+	private HttpCGIResponse handleCGIRequest(HttpRequest httpRequest) throws IOException{
+		HttpCGIResponse httpResponse=new HttpCGIResponse();
+		StringBuilder responseLinesBuilder=new StringBuilder();
+		StringBuilder entityBuilder=new StringBuilder();
+		Date now = new Date();
+		responseLinesBuilder.append("Date:"+now+"\r\n");
+		responseLinesBuilder.append("Server:"+config.serverVersion+"\r\n");
 		String scriptPath=httpRequest.requestUrl.substring(httpRequest.requestUrl.indexOf(config.CGIAlias)+config.CGIAlias.length());
 		if(scriptPath.contains("?"))
 			scriptPath=scriptPath.substring(0,scriptPath.indexOf("?"));
 		File file=new File(config.CGIPath,scriptPath);
 		if (file.canRead() &&file.getCanonicalPath().startsWith(config.CGIPath)){
-			CGI_ENV_LENGTH=4;//TODO support all env
+			CGI_ENV_LENGTH=5;//TODO support all environment variables
 			String[] envp=new String[CGI_ENV_LENGTH];
 			int index=0;
 			List<String> emotyList=new ArrayList<>();
@@ -202,7 +207,8 @@ public class HttpTask implements Runnable   {
 			envp[index++]="QUERY_STRING="+(httpRequest.requestUrl.contains("?")?httpRequest.requestUrl.substring(httpRequest.requestUrl.indexOf("?")+1):"");
 			envp[index++]="CONTENT_LENGTH="+StringUtils.join(httpRequest.headers.getOrDefault("Content-Length", emotyList), ",");
 			envp[index++]="CONTENT_TYPE="+StringUtils.join(httpRequest.headers.getOrDefault("Content-Type", emotyList), ",");
-			StringBuilder sb=new StringBuilder();
+			envp[index++]="HTTP_COOKIE="+(httpRequest.headers.containsKey("Cookie")?StringUtils.join(httpRequest.headers.get("Cookie")," "):"");
+			
 			if(scriptPath.endsWith(".py")){
 				
 				Process process = Runtime.getRuntime().exec("python "+file.getCanonicalPath(), envp);
@@ -215,43 +221,37 @@ public class HttpTask implements Runnable   {
 				BufferedReader input = new BufferedReader(new InputStreamReader(process.getInputStream()));
 				
 				String line = null;
+				while ((line = input.readLine()) != null&&!line.isEmpty()) {
+					responseLinesBuilder.append(line+"\r\n");
+				}
 				while ((line = input.readLine()) != null) {
-					sb.append(line);
+					entityBuilder.append(line);
 				}
 				process.destroy();
-			
+				
+				
 			}
 			
-			httpResponse.entity=new HttpEntity();
-			httpResponse.entity.contentType="text/html";//TODO get exact type
+			String entityString=entityBuilder.toString();
+			responseLinesBuilder.append("Content-length:"+entityString.getBytes().length+"\r\n");
+			responseLinesBuilder.append("\r\n");//an empty to separate headers and entity 
+			responseLinesBuilder.append(entityString);
+			httpResponse.responseLines=String.format("%s %d %s\r\n%s", config.httpVersion,
+					HttpResponse.HTTP_OK,"",responseLinesBuilder.toString());
+		
 			
-			httpResponse.entity.body=sb.toString().getBytes();
-			httpResponse.entity.contentLength=new Long(httpResponse.entity.body.length);
-		
-			httpResponse.headers.put("Content-length",new ArrayList<String>());
-			httpResponse.headers.get("Content-length").add(httpResponse.entity.contentLength+"");
-			httpResponse.headers.put("Content-type",new ArrayList<String>());
-			httpResponse.headers.get("Content-type").add(httpResponse.entity.contentType);
-	
-		
-			httpResponse.setStatusLine(config.httpVersion, HttpResponse.HTTP_OK, "");
 		}
 		else{
-			httpResponse.setStatusLine(config.httpVersion, HttpResponse.HTTP_NOT_FOUND, "File Not Found");
-			httpResponse.headers.put("Content-type",new ArrayList<String>());
-			httpResponse.headers.get("Content-type").add("text/plain");
+			httpResponse.responseLines=String.format("%s %d %s\r\n%s", config.httpVersion,
+					HttpResponse.HTTP_NOT_FOUND,"File Not Found","Content-type: text/plain");
             
 		}
-		Date now = new Date();
-		httpResponse.headers.put("Date",new ArrayList<String>());
-		httpResponse.headers.get("Date").add(now.toGMTString());
-		httpResponse.headers.put("Server",new ArrayList<String>());
-		httpResponse.headers.get("Server").add(config.serverVersion);
+		
 		return httpResponse;
 	}
 	
-	private HttpResponse handleStaticRequest(HttpRequest httpRequest) throws IOException{
-		HttpResponse httpResponse=new HttpResponse();
+	private HttpStaticResponse handleStaticRequest(HttpRequest httpRequest) throws IOException{
+		HttpStaticResponse httpResponse=new HttpStaticResponse();
 		File file = new File(documentRootDirectoryPath, 
 				httpRequest.requestUrl.substring(1,httpRequest.requestUrl.length()));
 		if (file.canRead() 
@@ -311,7 +311,7 @@ public class HttpTask implements Runnable   {
 	}
 	
 	
-	private boolean checkCacheValid(HttpRequest httpRequest,HttpResponse httpResponse,byte[] data,Date lastModified) {
+	private boolean checkCacheValid(HttpRequest httpRequest,HttpStaticResponse httpResponse,byte[] data,Date lastModified) {
 		boolean flag=false;
 		if(httpRequest.headers.containsKey("If-Modified-Since")){
 			if(httpRequest.headers.get("If-Modified-Since").get(0).trim().equals(lastModified.toGMTString())){
@@ -340,7 +340,7 @@ public class HttpTask implements Runnable   {
 		
 	}
 	
-	private void addAdditionalHeaders(HttpResponse httpResponse,HttpRequest httpRequest) {
+	private void addAdditionalHeaders(HttpStaticResponse httpResponse,HttpRequest httpRequest) {
 		//set additional headers according to configured default headers respect to specific paths 
 		for(Map.Entry<String,Map<String,String>> entry:config.headersForPathMap.entrySet()){
 			if(httpRequest.requestUrl.startsWith(entry.getKey())){
@@ -384,18 +384,29 @@ public class HttpTask implements Runnable   {
 	}
 
 	private void handleResponse(HttpResponse httpResponse,OutputStream raw) throws IOException {
-		Writer out = new OutputStreamWriter(raw);
-		 out.write(String.format("%s %d %s\r\n", httpResponse.version,httpResponse.status,httpResponse.reasonPhrase));
-		 for(Map.Entry<String,List<String>> entry:httpResponse.headers.entrySet()){
-			 out.write(String.format("%s: %s\r\n", entry.getKey(),StringUtils.join(entry.getValue(), " ")));
-		 }
-		
-         out.write("\r\n");
-         out.flush();
-         if(httpResponse.entity!=null){
-        	 raw.write(httpResponse.entity.body);
-        	 raw.flush();
-         }
+		if (httpResponse instanceof HttpStaticResponse) {
+			HttpStaticResponse httpStaticResponse = (HttpStaticResponse) httpResponse;
+			Writer out = new OutputStreamWriter(raw);
+			out.write(String.format("%s %d %s\r\n", httpStaticResponse.version,
+					httpStaticResponse.status, httpStaticResponse.reasonPhrase));
+			for (Map.Entry<String, List<String>> entry : httpStaticResponse.headers
+					.entrySet()) {
+				out.write(String.format("%s: %s\r\n", entry.getKey(),
+						StringUtils.join(entry.getValue(), " ")));
+			}
+
+			out.write("\r\n");
+			out.flush();
+			if (httpStaticResponse.entity != null) {
+				raw.write(httpStaticResponse.entity.body);
+				raw.flush();
+			}
+		}
+		else if(httpResponse instanceof HttpCGIResponse){
+			HttpCGIResponse httpCGIResponse = (HttpCGIResponse) httpResponse;
+			raw.write(httpCGIResponse.responseLines.getBytes());
+			raw.flush();
+		}
 	}
 
 }

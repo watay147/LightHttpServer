@@ -1,11 +1,6 @@
 package LightHttpServer;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
 public class HttpResponse {
-	
 	// 2XX: generally "OK"
     // 3XX: relocation/redirect
     // 4XX: client error
@@ -196,22 +191,4 @@ public class HttpResponse {
      * Numeric status code, 505: Version not supported
      */
     public static final int HTTP_VERSION = 505;
-	
-	
-	public String version;
-	public int status;
-	public String reasonPhrase;
-	public Map<String, List<String>> headers;
-	public HttpEntity entity;
-	
-	public HttpResponse(){
-		this.headers=new HashMap<String, List<String>>();
-		
-	}
-	
-	public void setStatusLine(String version,int status,String reasonPhrase) {
-		this.version=version;
-		this.status=status;
-		this.reasonPhrase=reasonPhrase;
-	}
 }
