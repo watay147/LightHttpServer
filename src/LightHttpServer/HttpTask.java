@@ -130,16 +130,20 @@ public class HttpTask implements Runnable   {
 		
 		//the below will also read the \r\n for separating the headers and the entity
 		while((headersLine=in.readLine())!=null&&!headersLine.isEmpty()){
-			String key=headersLine.substring(0,headersLine.indexOf(":"));
-			String value=headersLine.substring(headersLine.indexOf(":")+1,headersLine.length()).trim();
-			//may has duplicated headers, just save and wait for the process later
-			if(headers.containsKey(key)){
-				headers.get(key).add(value);
-			}
-			else{
-				List<String> values=new ArrayList<>();
-				values.add(value);
-				headers.put(key, values);
+			if (headersLine.contains(":")) {
+				String key = headersLine.substring(0, headersLine.indexOf(":"));
+				String value = headersLine.substring(
+						headersLine.indexOf(":") + 1, headersLine.length())
+						.trim();
+				// may has duplicated headers, just save and wait for the
+				// process later
+				if (headers.containsKey(key)) {
+					headers.get(key).add(value);
+				} else {
+					List<String> values = new ArrayList<>();
+					values.add(value);
+					headers.put(key, values);
+				}
 			}
 		}
 		
