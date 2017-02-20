@@ -23,6 +23,7 @@ public class HttpRequest {
 	public String requestUrl;
 	public String host;
 	public String version;
+	public boolean shouldServe;
 	//may have duplicated headers, all values belong to the same key of a header stored as a List
 	public Map<String, List<String>> headers;
 	public HttpEntity entity;

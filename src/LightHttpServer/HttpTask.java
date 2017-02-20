@@ -49,15 +49,17 @@ public class HttpTask implements Runnable   {
 	public void run() {
         try   
         {    
-        	OutputStream raw = new BufferedOutputStream(
-        			connectionSocket.getOutputStream()
-                   );
+        	
         	
         	BufferedReader bufferedReader=new BufferedReader(
         			new InputStreamReader(connectionSocket.getInputStream()));
         	HttpRequest httpRequest=parseRequest(bufferedReader);
-        	HttpResponse httpResponse=handleRequest(httpRequest);
-        	handleResponse(httpResponse,raw);
+			if (httpRequest.shouldServe) {
+				OutputStream raw = new BufferedOutputStream(
+						connectionSocket.getOutputStream());
+				HttpResponse httpResponse = handleRequest(httpRequest);
+				handleResponse(httpResponse, raw);
+			}
         }
         catch (IOException ex){
         	//TODO log
@@ -83,21 +85,25 @@ public class HttpTask implements Runnable   {
 		
 		//read the first line
 		String requestLine = in.readLine();
-    	StringTokenizer st = new StringTokenizer(requestLine);
-    	httpRequest.methodString=st.nextToken();
-    	httpRequest.method = getMethod(httpRequest.methodString);
-    	httpRequest.requestUrl=st.nextToken();
-    	//if in GET method, check if need to auto-fill index file path
-    	if(httpRequest.method==Method.GET){
-    		if(httpRequest.requestUrl.equals("/"))
-    			httpRequest.requestUrl+=config.indexFilePath;
-    	}
-    	httpRequest.version=st.nextToken();
-    
-    	
-    	httpRequest.headers=getHeaders(in);
-    	httpRequest.entity=getRequestEntity(in,httpRequest.headers);
-    	
+		if(requestLine!=null){
+			httpRequest.shouldServe = true;
+			StringTokenizer st = new StringTokenizer(requestLine);
+			httpRequest.methodString = st.nextToken();
+			httpRequest.method = getMethod(httpRequest.methodString);
+			httpRequest.requestUrl = st.nextToken();
+			// if in GET method, check if need to auto-fill index file path
+			if (httpRequest.method == Method.GET) {
+				if (httpRequest.requestUrl.equals("/"))
+					httpRequest.requestUrl += config.indexFilePath;
+			}
+			httpRequest.version = st.nextToken();
+
+			httpRequest.headers = getHeaders(in);
+			httpRequest.entity = getRequestEntity(in, httpRequest.headers);
+		}
+		else{
+			httpRequest.shouldServe=false;
+		}
     	return httpRequest;	 
 		
 	}
