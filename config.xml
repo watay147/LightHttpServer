@@ -6,10 +6,10 @@
     <host>
         <host_name>test.com</host_name>
         <index_file>index.html</index_file>
-        <document_root_directory_path>E:/workspace/www/</document_root_directory_path>
+        <document_root_directory_path>www/</document_root_directory_path>
         <cgi>
             <url_alias>/cgi-bin/</url_alias>
-            <document_path>E:/workspace/www/cgi-bin/</document_path>
+            <document_path>www/cgi-bin/</document_path>
         </cgi>
         <headers>
             <set>

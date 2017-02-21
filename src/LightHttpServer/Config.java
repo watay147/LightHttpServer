@@ -56,20 +56,13 @@ public class Config {
 			port = 8800;
 			maxThreadNum = 10;
 			keepAliveTime = 30;
-			documentRootDirectoryPath = "E:/workspace/www/";
+			documentRootDirectoryPath = "www/";
 			CGIAlias = "/cgi-bin/";
-			CGIPath = "E:/workspace/www/cgi-bin/";
+			CGIPath = "www/cgi-bin/";
 			indexFilePath = "index.html";
 			coreNum = Runtime.getRuntime().availableProcessors();
 			serverVersion = "LightHttpServer/0.1";
-			headersForPathMap = new HashMap<String, Map<String, String>>();
-			Map<String, String> defaultHeaders = new HashMap<String, String>();
-			// defaultHeaders.put("Cache-Control", "max-age = 20");
-			// defaultHeaders.put("Cache-Control", "must-revalidate");
-			defaultHeaders.put("Last-Modified", "0");
-			defaultHeaders.put("ETag", "0");
-
-			headersForPathMap.put("/static/", defaultHeaders);
+			
 		}
 		else{
 			try{
