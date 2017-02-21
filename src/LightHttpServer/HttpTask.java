@@ -187,7 +187,7 @@ public class HttpTask implements Runnable   {
 
 	
 	private HttpResponse handleRequest(HttpRequest httpRequest) throws IOException{
-		if(httpRequest.requestUrl.startsWith(config.CGIAlias)){
+		if(config.CGIAlias!=null&&httpRequest.requestUrl.startsWith(config.CGIAlias)){
 			return handleCGIRequest(httpRequest);
 		}
 		else{
@@ -351,36 +351,42 @@ public class HttpTask implements Runnable   {
 	}
 	
 	private void addAdditionalHeaders(HttpStaticResponse httpResponse,HttpRequest httpRequest) {
-		//set additional headers according to configured default headers respect to specific paths 
-		for(Map.Entry<String,Map<String,String>> entry:config.headersForPathMap.entrySet()){
-			if(httpRequest.requestUrl.startsWith(entry.getKey())){
-				for(Map.Entry<String,String> subEntry:entry.getValue().entrySet()){
-					if(httpResponse.headers.containsKey(subEntry.getKey())){
-						httpResponse.headers.get(subEntry.getKey()).add(subEntry.getValue());
-					}
-					else{
-						if(subEntry.getKey().equals("Last-Modified")){
-							List<String> header=new ArrayList<>();
-							header.add(httpResponse.entity.lastModified);
+		if (config.headersForPathMap != null) {
+			// set additional headers according to configured default headers
+			// respect to specific paths
+			for (Map.Entry<String, Map<String, String>> entry : config.headersForPathMap
+					.entrySet()) {
+				if (httpRequest.requestUrl.startsWith(entry.getKey())) {
+					for (Map.Entry<String, String> subEntry : entry.getValue()
+							.entrySet()) {
+						if (httpResponse.headers.containsKey(subEntry.getKey())) {
+							httpResponse.headers.get(subEntry.getKey()).add(
+									subEntry.getValue());
+						} else {
+							if (subEntry.getKey().equals("Last-Modified")) {
+								List<String> header = new ArrayList<>();
+								header.add(httpResponse.entity.lastModified);
+								httpResponse.headers.put(subEntry.getKey(),
+										header);
+								continue;
+							} else if (subEntry.getKey().equals("ETag")) {
+								List<String> header = new ArrayList<>();
+								header.add(generateETag(httpResponse.entity.body));
+								httpResponse.headers.put(subEntry.getKey(),
+										header);
+								continue;
+							}
+
+							List<String> header = new ArrayList<>();
+							header.add(subEntry.getValue());
 							httpResponse.headers.put(subEntry.getKey(), header);
-							continue;
 						}
-						else if(subEntry.getKey().equals("ETag")){
-							List<String> header=new ArrayList<>();
-							header.add(generateETag(httpResponse.entity.body));
-							httpResponse.headers.put(subEntry.getKey(), header);
-							continue;
-						}
-						
-						List<String> header=new ArrayList<>();
-						header.add(subEntry.getValue());
-						httpResponse.headers.put(subEntry.getKey(), header);
 					}
+
 				}
-				
+
 			}
-			 
-		 }
+		}
 	}
 	
 	private String generateETag(byte[] data) {
