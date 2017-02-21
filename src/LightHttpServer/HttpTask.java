@@ -230,7 +230,7 @@ public class HttpTask implements Runnable   {
 				BufferedReader reader=new BufferedReader(new FileReader(file));
 				String comandLine=reader.readLine();
 				reader.close();
-				if(comandLine.startsWith("#!")){
+				if(comandLine.startsWith("#!")&&file.canExecute()){
 					comandLine=comandLine.substring(comandLine.indexOf("#!")+2);
 					process= Runtime.getRuntime().exec(comandLine+" "+file.getCanonicalPath(), envp);
 					executeCGI(httpResponse, httpRequest, responseLinesBuilder,entityBuilder, process);
