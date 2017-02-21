@@ -49,6 +49,7 @@ public class Config {
 	public Map<String, Map<String, String>> headersForPathMap;
 	public String html404Content="<html><body><h1>404 Not Found</h1></body></html>";
 	
+	
 	public void loadConfig(){
 		Document xmlDocument=loadConfigDocument();
 		if(xmlDocument==null){

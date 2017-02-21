@@ -1,3 +1,5 @@
+#!E:/Anaconda/python
+
 import os,cgi
 import Cookie
 form = cgi.FieldStorage()

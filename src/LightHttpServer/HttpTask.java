@@ -7,6 +7,7 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
@@ -219,45 +220,68 @@ public class HttpTask implements Runnable   {
 			envp[index++]="CONTENT_TYPE="+StringUtils.join(httpRequest.headers.getOrDefault("Content-Type", emotyList), ",");
 			envp[index++]="HTTP_COOKIE="+(httpRequest.headers.containsKey("Cookie")?StringUtils.join(httpRequest.headers.get("Cookie")," "):"");
 			
-			if(scriptPath.endsWith(".py")){
-				
-				Process process = Runtime.getRuntime().exec("python "+file.getCanonicalPath(), envp);
-				if(httpRequest.method==HttpRequest.Method.POST&&httpRequest.entity!=null){
-					DataOutputStream toCGI=new DataOutputStream(process.getOutputStream());
-					toCGI.write(httpRequest.entity.body);
-					toCGI.flush();//remember to flush
+			
+			Process process;
+			if(scriptPath.endsWith(".exe")){
+				process= Runtime.getRuntime().exec(file.getCanonicalPath(), envp);
+				executeCGI(httpResponse, httpRequest, responseLinesBuilder,entityBuilder, process);
+			}
+			else{
+				BufferedReader reader=new BufferedReader(new FileReader(file));
+				String comandLine=reader.readLine();
+				reader.close();
+				if(comandLine.startsWith("#!")){
+					comandLine=comandLine.substring(comandLine.indexOf("#!")+2);
+					process= Runtime.getRuntime().exec(comandLine+" "+file.getCanonicalPath(), envp);
+					executeCGI(httpResponse, httpRequest, responseLinesBuilder,entityBuilder, process);
+					
 				}
-				
-				BufferedReader input = new BufferedReader(new InputStreamReader(process.getInputStream()));
-				
-				String line = null;
-				while ((line = input.readLine()) != null&&!line.isEmpty()) {
-					responseLinesBuilder.append(line+"\r\n");
+				else{
+					String message=generateErrorHtml("500 Internal Error: Not an executable or valid CGI script");
+					httpResponse.responseLines=String.format("%s %d %s\r\n%s\r\n\r\n%s", config.httpVersion,
+							HttpResponse.HTTP_INTERNAL_ERROR,"Internal Error","Content-type: text/html",message);
+		            
 				}
-				while ((line = input.readLine()) != null) {
-					entityBuilder.append(line);
-				}
-				process.destroy();
-				
-				
 			}
 			
-			String entityString=entityBuilder.toString();
-			responseLinesBuilder.append("Content-length:"+entityString.getBytes().length+"\r\n");
-			responseLinesBuilder.append("\r\n");//an empty to separate headers and entity 
-			responseLinesBuilder.append(entityString);
-			httpResponse.responseLines=String.format("%s %d %s\r\n%s", config.httpVersion,
-					HttpResponse.HTTP_OK,"",responseLinesBuilder.toString());
-		
+			
+			
+			
 			
 		}
 		else{
-			httpResponse.responseLines=String.format("%s %d %s\r\n%s\r\n\r\n", config.httpVersion,
-					HttpResponse.HTTP_NOT_FOUND,"File Not Found","Content-type: text/plain",config.html404Content);
+			httpResponse.responseLines=String.format("%s %d %s\r\n%s\r\n\r\n%s", config.httpVersion,
+					HttpResponse.HTTP_NOT_FOUND,"File Not Found","Content-type: text/html",config.html404Content);
             
 		}
 		
 		return httpResponse;
+	}
+	
+	private void executeCGI(HttpCGIResponse httpResponse,HttpRequest httpRequest,StringBuilder responseLinesBuilder,
+			StringBuilder entityBuilder, Process process) throws IOException{
+		if(httpRequest.method==HttpRequest.Method.POST&&httpRequest.entity!=null){
+			DataOutputStream toCGI=new DataOutputStream(process.getOutputStream());
+			toCGI.write(httpRequest.entity.body);
+			toCGI.flush();//remember to flush
+		}
+		
+		BufferedReader input = new BufferedReader(new InputStreamReader(process.getInputStream()));
+		
+		String line = null;
+		while ((line = input.readLine()) != null&&!line.isEmpty()) {
+			responseLinesBuilder.append(line+"\r\n");
+		}
+		while ((line = input.readLine()) != null) {
+			entityBuilder.append(line);
+		}
+		process.destroy();
+		String entityString=entityBuilder.toString();
+		responseLinesBuilder.append("Content-length:"+entityString.getBytes().length+"\r\n");
+		responseLinesBuilder.append("\r\n");//an empty to separate headers and entity 
+		responseLinesBuilder.append(entityString);
+		httpResponse.responseLines=String.format("%s %d %s\r\n%s", config.httpVersion,
+				HttpResponse.HTTP_OK,"",responseLinesBuilder.toString());
 	}
 	
 	private HttpStaticResponse handleStaticRequest(HttpRequest httpRequest) throws IOException{
@@ -431,4 +455,11 @@ public class HttpTask implements Runnable   {
 		}
 	}
 
+	private static String generateErrorHtml(String message) {
+		return String.format("<html><body><h1>%s</h1></body></html>", message);
+	
+		
+		
+	}
+	
 }
