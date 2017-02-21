@@ -36,7 +36,7 @@ public class HttpTask implements Runnable   {
 	private static int CGI_ENV_LENGTH=13;
 	private Config config;
 	private String documentRootDirectoryPath;
-	private Socket connectionSocket;  
+	private Socket connectionSocket;
 	
 	public HttpTask(Config config,Object taskData){
 		this.config=config;
@@ -252,8 +252,8 @@ public class HttpTask implements Runnable   {
 			
 		}
 		else{
-			httpResponse.responseLines=String.format("%s %d %s\r\n%s", config.httpVersion,
-					HttpResponse.HTTP_NOT_FOUND,"File Not Found","Content-type: text/plain");
+			httpResponse.responseLines=String.format("%s %d %s\r\n%s\r\n\r\n", config.httpVersion,
+					HttpResponse.HTTP_NOT_FOUND,"File Not Found","Content-type: text/plain",config.html404Content);
             
 		}
 		
@@ -304,7 +304,13 @@ public class HttpTask implements Runnable   {
 		else{
 			httpResponse.setStatusLine(config.httpVersion, HttpResponse.HTTP_NOT_FOUND, "File Not Found");
 			httpResponse.headers.put("Content-type",new ArrayList<String>());
-			httpResponse.headers.get("Content-type").add("text/plain");
+			httpResponse.headers.get("Content-type").add("text/html");
+			httpResponse.entity=new HttpEntity();
+			httpResponse.entity.body=config.html404Content.getBytes();
+			httpResponse.entity.contentLength=Long.valueOf(httpResponse.entity.body.length);
+			httpResponse.headers.put("Content-length",new ArrayList<String>());
+			httpResponse.headers.get("Content-length").add(httpResponse.entity.contentLength+"");
+
             
 		}
 		Date now = new Date();
