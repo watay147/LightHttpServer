@@ -49,6 +49,26 @@ public class Config {
 	public Map<String, Map<String, String>> headersForPathMap;
 	public String html404Content="<html><body><h1>404 Not Found</h1></body></html>";
 	
+	public Config() {
+		
+	}
+	
+	public Config(Config config) {
+		this.port=config.port;
+		this.coreNum=config.coreNum;
+		this.maxThreadNum=config.maxThreadNum;
+		this.keepAliveTime=config.keepAliveTime;
+		this.httpVersion=new String(config.httpVersion);
+		this.host=new String(config.host);
+		
+		this.documentRootDirectoryPath=new String(config.documentRootDirectoryPath);
+		this.CGIAlias=new String(config.CGIPath);
+		this.indexFilePath=new String(config.indexFilePath);
+		this.serverVersion=new String(config.serverVersion);
+		if(config.headersForPathMap!=null)
+			this.headersForPathMap=new HashMap<>(config.headersForPathMap);
+		this.html404Content=new String(config.html404Content);
+	}
 	
 	public void loadConfig(){
 		Document xmlDocument=loadConfigDocument();

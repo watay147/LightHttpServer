@@ -10,6 +10,8 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import org.slf4j.Logger;  
+import org.slf4j.LoggerFactory;  
 
 
 public class Server {
@@ -18,6 +20,7 @@ public class Server {
 	private Config config;
 	private ThreadPoolExecutor threadPool;
 	private ServerSocket socket;
+	private Logger logger;
 	
 	public static Server getServer(){
 		if(server==null){
@@ -31,6 +34,7 @@ public class Server {
 	}
 	
 	public void init() {
+		logger=LoggerFactory.getLogger(Server.class);  
 		config=new Config();
 		config.loadConfig();
 		threadPool=new ThreadPoolExecutor(config.coreNum, 
@@ -59,12 +63,11 @@ public class Server {
 			 
 		}
 		catch (IOException ex){
-			System.out.println("Error: "+ex.toString());
-			ex.printStackTrace();
-			//TODO log
+			Date now=new Date();
+			logger.error(now+" "+ex.getMessage(), ex);
 			System.exit(-1);
 		}
-		System.out.println("Server inited!");
+		logger.info("Server inited!");
 		
 	}
 	public void start() {

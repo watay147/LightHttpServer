@@ -29,8 +29,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.StringTokenizer;
 
+import util.StringUtils;
 import LightHttpServer.HttpRequest.Method;
-import StringUtils.StringUtils;
 
 
 public class HttpTask implements Runnable   {
@@ -40,7 +40,8 @@ public class HttpTask implements Runnable   {
 	private Socket connectionSocket;
 	
 	public HttpTask(Config config,Object taskData){
-		this.config=config;
+		
+		this.config=new Config(config);
 		this.documentRootDirectoryPath=config.documentRootDirectoryPath;
 		this.connectionSocket= (Socket) taskData;
 		
@@ -50,7 +51,6 @@ public class HttpTask implements Runnable   {
 	public void run() {
         try   
         {    
-        	
         	
         	BufferedReader bufferedReader=new BufferedReader(
         			new InputStreamReader(connectionSocket.getInputStream()));
