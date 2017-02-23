@@ -29,6 +29,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.StringTokenizer;
 
+import util.LogUtil;
 import util.StringUtils;
 import LightHttpServer.HttpRequest.Method;
 
@@ -63,7 +64,7 @@ public class HttpTask implements Runnable   {
 			}
         }
         catch (IOException ex){
-        	//TODO log
+        	LogUtil.error(ex.getMessage(), ex);
         }
         finally  
         {  
@@ -72,7 +73,7 @@ public class HttpTask implements Runnable   {
             	connectionSocket.close();          
             }  
             catch (IOException ex) {
-            	//TODO log
+            	LogUtil.error(ex.getMessage(), ex);
             }   
         }  
 		
@@ -424,7 +425,8 @@ public class HttpTask implements Runnable   {
 	        MessageDigest md = MessageDigest.getInstance("MD5");  
 	        md.update(data);        
 	        return new BigInteger(1, md.digest()).toString(16);
-	    } catch (Exception e) {
+	    } catch (Exception ex) {
+	    	LogUtil.error(ex.getMessage(), ex);
 	    	return "";
 	    }
 	}

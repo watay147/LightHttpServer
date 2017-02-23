@@ -10,8 +10,11 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+
 import org.slf4j.Logger;  
 import org.slf4j.LoggerFactory;  
+
+import util.LogUtil;
 
 
 public class Server {
@@ -20,7 +23,7 @@ public class Server {
 	private Config config;
 	private ThreadPoolExecutor threadPool;
 	private ServerSocket socket;
-	private Logger logger;
+	
 	
 	public static Server getServer(){
 		if(server==null){
@@ -34,7 +37,7 @@ public class Server {
 	}
 	
 	public void init() {
-		logger=LoggerFactory.getLogger(Server.class);  
+		
 		config=new Config();
 		config.loadConfig();
 		threadPool=new ThreadPoolExecutor(config.coreNum, 
@@ -63,27 +66,28 @@ public class Server {
 			 
 		}
 		catch (IOException ex){
-			Date now=new Date();
-			logger.error(now+" "+ex.getMessage(), ex);
+			
+			LogUtil.error(ex.getMessage(), ex);
 			System.exit(-1);
 		}
-		logger.info("Server inited!");
+		LogUtil.info("Server inited!");
 		
 	}
 	public void start() {
-		System.out.println("Server is running!");
+		LogUtil.info("Server is running!");
 		 while (true){
 			 try{
 				 Socket requestSocket = socket.accept();  
-				 Date now=new Date();
-				 System.out.println(now+" Received access from: "+requestSocket.getInetAddress().getHostAddress());
+				
+				 LogUtil.info("Received access from: "+requestSocket.getInetAddress().getHostAddress());
 				 threadPool.execute(new HttpTask(config, requestSocket));
 			 }
 			 catch (IOException ex) {  
-				//TODO log
+				
+				 LogUtil.error(ex.getMessage(), ex);
 	         }
 			 catch (RejectedExecutionException e) {
-				// TODO: handle exception
+				// TODO: handle RejectedExecutionException
 			}
 		 }
 	}
