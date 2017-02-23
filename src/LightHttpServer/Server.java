@@ -1,7 +1,11 @@
 package LightHttpServer;
 
+import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.IOException;
+import java.io.OutputStream;
+import java.io.OutputStreamWriter;
+import java.io.Writer;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.Date;
@@ -74,23 +78,49 @@ public class Server {
 		LogUtil.info("Server inited!");
 		
 	}
+
 	public void start() {
 		LogUtil.info("Server is running!");
-		 while (true){
-			 try{
-				 Socket requestSocket = socket.accept();  
-				
-				 LogUtil.info("Received access from: "+requestSocket.getInetAddress().getHostAddress());
-				 threadPool.execute(new HttpTask(config, requestSocket));
-			 }
-			 catch (IOException ex) {  
-				
-				 LogUtil.error(ex.getMessage(), ex);
-	         }
-			 catch (RejectedExecutionException e) {
-				// TODO: handle RejectedExecutionException
+		Socket requestSocket = null;
+		while (true) {
+			try {
+				requestSocket = socket.accept();
+
+				LogUtil.info("Received access from: "
+						+ requestSocket.getInetAddress().getHostAddress());
+				threadPool.execute(new HttpTask(config, requestSocket));
+
+			} catch (IOException ex) {
+
+				LogUtil.error(ex.getMessage(), ex);
+				try {
+					requestSocket.close();
+				} catch (IOException ioEx) {
+					LogUtil.error(ioEx.getMessage(), ioEx);
+				}
+			} catch (RejectedExecutionException ex) {
+				LogUtil.warn(ex.getMessage(), ex);
+				try {
+					OutputStream raw = new BufferedOutputStream(
+							requestSocket.getOutputStream());
+					Writer out = new OutputStreamWriter(raw);
+					out.write(String.format("%s %d %s\r\n\r\n",
+							config.httpVersion, HttpResponse.HTTP_UNAVAILABLE,
+							"Service Unavailable"));
+					out.write("<html><body><h1>503 Service Unavailable</h1></body></html>");
+					out.flush();
+				} catch (IOException e) {
+
+				} finally {
+					try {
+						requestSocket.close();
+					} catch (IOException ioEx) {
+						LogUtil.error(ioEx.getMessage(), ioEx);
+					}
+				}
+
 			}
-		 }
+		}
 	}
 	
 	
