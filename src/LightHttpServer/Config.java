@@ -65,7 +65,8 @@ public class Config {
 		this.httpVersion=new String(config.httpVersion);
 		this.host=new String(config.host);
 		this.documentRootDirectoryPath=new String(config.documentRootDirectoryPath);
-		this.CGIAlias=new String(config.CGIPath);
+		this.CGIAlias=new String(config.CGIAlias);
+		this.CGIPath=new String(config.CGIPath);
 		this.indexFilePath=new String(config.indexFilePath);
 		this.serverVersion=new String(config.serverVersion);
 		if(config.headersForPathMap!=null)

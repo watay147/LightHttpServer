@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf8"?>  
+<server>
+    <max_threads>10</max_threads>
+    <thread_idle_time>30</thread_idle_time>
+    <waiting_queue_size>3</waiting_queue_size>
+    <port>8800</port>
+    <host>
+        <host_name>test.com</host_name>
+        <index_file>index.html</index_file>
+        <document_root_directory_path>www/</document_root_directory_path>
+        <cgi>
+            <url_alias>/cgi-bin/</url_alias>
+            <document_path>www/cgi-bin/</document_path>
+        </cgi>
+        <headers>
+            <set>
+                <url_alias>/static/</url_alias>
+                <header>
+                    <key>Cache-Control </key>
+                    <value>max-age = 20</value>
+                </header>
+
+            </set>
+        </headers>
+
+    </host>
+</server>
