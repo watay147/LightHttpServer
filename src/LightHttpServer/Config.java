@@ -40,7 +40,8 @@ public class Config {
 	public int port;
 	public int coreNum;
 	public int maxThreadNum;
-	public int keepAliveTime;
+	public int threadIdleTime;
+	public int waitingQueueSize;
 	public String documentRootDirectoryPath;
 	public String CGIAlias;
 	public String CGIPath;
@@ -57,10 +58,11 @@ public class Config {
 		this.port=config.port;
 		this.coreNum=config.coreNum;
 		this.maxThreadNum=config.maxThreadNum;
-		this.keepAliveTime=config.keepAliveTime;
+		this.threadIdleTime=config.threadIdleTime;
+		this.waitingQueueSize=config.waitingQueueSize;
+		
 		this.httpVersion=new String(config.httpVersion);
 		this.host=new String(config.host);
-		
 		this.documentRootDirectoryPath=new String(config.documentRootDirectoryPath);
 		this.CGIAlias=new String(config.CGIPath);
 		this.indexFilePath=new String(config.indexFilePath);
@@ -77,7 +79,8 @@ public class Config {
 			host = "localhost";
 			port = 8800;
 			maxThreadNum = 10;
-			keepAliveTime = 30;
+			waitingQueueSize=3;
+			threadIdleTime = 30;
 			documentRootDirectoryPath = "www/";
 			CGIAlias = "/cgi-bin/";
 			CGIPath = "www/cgi-bin/";
@@ -101,10 +104,13 @@ public class Config {
 				throw new Exception("\"port\" in \"config.xml\" should be set between 0 to 65536");
 			
 			nodeList= xmlDocument.getElementsByTagName("max_threads");
-			maxThreadNum=nodeList.getLength()>0?Integer.valueOf(nodeList.item(0).getTextContent().trim()):80;
+			maxThreadNum=nodeList.getLength()>0?Integer.valueOf(nodeList.item(0).getTextContent().trim()):10;
 			
-			nodeList= xmlDocument.getElementsByTagName("service_wait_time");
-			keepAliveTime =nodeList.getLength()>0?Integer.valueOf(nodeList.item(0).getTextContent().trim()):80;
+			nodeList= xmlDocument.getElementsByTagName("thread_idle_time");
+			threadIdleTime =nodeList.getLength()>0?Integer.valueOf(nodeList.item(0).getTextContent().trim()):30;
+			
+			nodeList= xmlDocument.getElementsByTagName("waiting_queue_size");
+			waitingQueueSize =nodeList.getLength()>0?Integer.valueOf(nodeList.item(0).getTextContent().trim()):3;
 			
 			nodeList=xmlDocument.getElementsByTagName("host");
 			if(nodeList.getLength()<=0)

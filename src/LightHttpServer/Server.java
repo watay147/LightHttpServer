@@ -42,9 +42,9 @@ public class Server {
 		config.loadConfig();
 		threadPool=new ThreadPoolExecutor(config.coreNum, 
 				config.maxThreadNum,
-				config.keepAliveTime,
+				config.threadIdleTime,
 				TimeUnit.SECONDS,
-				new LinkedBlockingQueue<Runnable>(),new ThreadPoolExecutor.AbortPolicy());//TODO Tune it to best
+				new ArrayBlockingQueue<Runnable>(config.waitingQueueSize),new ThreadPoolExecutor.AbortPolicy());//TODO Tune it to best
 		try{
 			
 			socket=new ServerSocket(config.port);
@@ -54,7 +54,8 @@ public class Server {
 				 throw new IOException("Document root directory path \""+
 			 config.documentRootDirectoryPath+"\" is no valid");
 			 }
-			 config.documentRootDirectoryPath=docRoot.getCanonicalPath();//have to turn to be OS specifically canonical
+			//have to turn to be OS specifically canonical
+			 config.documentRootDirectoryPath=docRoot.getCanonicalPath();
 			 
 			 File docCGI;
 			 docCGI = new File(config.CGIPath);

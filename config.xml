@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="utf8"?>  
 <server>
     <max_threads>10</max_threads>
-    <service_wait_time>30</service_wait_time>
+    <thread_idle_time>30</thread_idle_time>
+    <waiting_queue_size>3</waiting_queue_size>
     <port>8800</port>
     <host>
         <host_name>test.com</host_name>
